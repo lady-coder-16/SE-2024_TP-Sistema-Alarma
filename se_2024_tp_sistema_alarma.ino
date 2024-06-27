@@ -16,25 +16,50 @@ const byte PIN_SENSOR_HABITACION = 2;
 const byte PIN_SENSOR_COCINA = A3;
 const byte PIN_SENSOR_ENTRADA = A2;
 
+//PINES KEYPAD
+// Se define las dimensiones del Keypad y los pines a los que está conectado
+const byte FILAS = 4; // Cuatro filas
+const byte COLUMNAS = 4; // Cuatro columnas
+char keys[FILAS][COLUMNAS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte filasPines[FILAS] = {13,12,11,10}; // Pines filas del Keypad
+byte columnasPines[COLUMNAS] = {9,8,7,4}; // Pines columnas del Keypad
+
+// Inicializar el teclado
+Keypad keypad = Keypad( makeKeymap(keys), filasPines, columnasPines, FILAS, COLUMNAS);
+
+
+
+//LCD_DISPLAY_I2C
+const byte MAX_CHARS = 16;
+const byte MAX_FILAS = 2;
+
+// Inicializar el LCD I2C
+LiquidCrystal_I2C lcd(0x20, MAX_CHARS, MAX_FILAS);  // Display (address 0x20) de 16 caracteres y 2 filas.
+
 
 // C++ code
 //Paradigma orientado a objetos
 
 class Sensor{
   private:
-  	char nombre;
+  	char nombre[10] = "";
     byte pin;
-  	boolean activado; //true/false
+  	bool activado; //true/false
   	byte pinLed;
   
   public:
   
   //GETTERS
-  char getNombre(){
+  char* getNombre(){
     return nombre;
   }
   
-  	boolean getActivado(){
+  	bool getActivado(){
       return activado;
   	}
   
@@ -49,11 +74,11 @@ class Sensor{
   
   //SETTERS
   
-  void setNombre(char n){
-    nombre = n;
+  char setNombre(const char* n){
+    strcpy(nombre, n);
   }
   
-  void setActivado(boolean a){
+  void setActivado(bool a){
    	activado = a; 
   }
   
@@ -83,7 +108,7 @@ class Sensor{
   }
   
   
-  //Si el sensor esta activado, 
+  
   void funcionamiento(){
     long tiempoInicio = 0;
     long tiempoFin = 0;
@@ -91,12 +116,12 @@ class Sensor{
      if(getActivado()== false){
       apagarLed();
     } else{
-       
+       //Si el sensor esta activado, 
        if(microsegundosACentimetros(leerDuracionDistancia())<=100){
          tiempoInicio = millis();
         
          while(microsegundosACentimetros(leerDuracionDistancia())<=100){
-         	//encenderLed();
+  
            if(lecturaAlarmaSilenciosa() == 0){
              sonarAlarma();
            }else{
@@ -154,8 +179,8 @@ class Sensor{
   }
   
   //METODOS ALARMA
-  boolean lecturaAlarmaSilenciosa(){
-    boolean alarmaSilenciosa;
+  bool lecturaAlarmaSilenciosa(){
+    bool alarmaSilenciosa;
   	alarmaSilenciosa = EEPROM.get(8, alarmaSilenciosa);
     
     return alarmaSilenciosa;
@@ -189,6 +214,12 @@ void setup()
   //buzzer
   pinMode(PIN_BUZZER, OUTPUT);
   
+  //Inicializar el LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  
+  bienvenida();
   
   if(EEPROM.get(0, lectura)==0){
     configPorDefecto();
@@ -200,8 +231,37 @@ void setup()
   
 }
 
+///////////////////////////////
 void loop()
 {  
+  //--------------------------------------------
+  
+  char key = keypad.getKey(); // Leer la tecla presionada
+  
+  if(key != NO_KEY) { // Si se ha presionado una tecla
+    static byte filaActual = 0; // Variable para rastrear la fila actual del LCD
+    static byte columnaActual = 0; // Variable para rastrear la columna actual del LCD
+    
+    // Escribir la tecla en el LCD
+    lcd.setCursor(columnaActual, filaActual);
+    lcd.print(key);
+    
+    // Incrementar las posiciones de columna y fila
+    columnaActual++;
+    if (columnaActual >= MAX_CHARS) { // Si se alcanza el límite de la columna
+      columnaActual = 0; // Volver a la columna 0
+      filaActual++; // Ir a la siguiente fila
+      
+      if (filaActual >= MAX_FILAS) { // Si se alcanza el límite de la fila
+        delay(1000); // Esperar un segundo
+        lcd.clear(); // Limpiar la pantalla
+        filaActual = 0; // Volver a la fila 0
+        columnaActual = 0; // Volver a la columna 0
+      }
+    }
+  }
+  
+  //---------------------------------------------
   
   //PRUEBA DE EEPROM
   lectura = EEPROM.get(0, lectura);//lectura PIN
@@ -213,15 +273,10 @@ void loop()
   pinCorrecto(1234);
   
   
-  /*//PRUEBA BUZZER - FUNCIONA
-  tone(PIN_BUZZER, 440, 200);
-  delay(200);
- */
-  
   //PRUEBA DE SENSORES
   Sensor habitacion;
   
-  habitacion.setNombre('H');
+  habitacion.setNombre("Habitacion");
   habitacion.setPin(PIN_SENSOR_HABITACION);
   habitacion.setActivado(lecturaEEPROM(2));// SENSOR HABITACION
   habitacion.setPinLed(PIN_LED_HABITACION);
@@ -232,7 +287,7 @@ void loop()
   //----------------------------------
   Sensor cocina;
   
-  habitacion.setNombre('C');
+  cocina.setNombre("Cocina");
   cocina.setPin(PIN_SENSOR_COCINA);
   cocina.setActivado(lecturaEEPROM(4)); // SENSOR COCINA
   cocina.setPinLed(PIN_LED_COCINA);
@@ -243,7 +298,7 @@ void loop()
   //------------------------------------
   Sensor entrada;
   
-  habitacion.setNombre('E');
+  entrada.setNombre("Entrada");
   entrada.setPin(PIN_SENSOR_ENTRADA);
   entrada.setActivado(lecturaEEPROM(6)); // SENSOR ENTRADA
   entrada.setPinLed(PIN_LED_ENTRADA);
@@ -251,16 +306,16 @@ void loop()
   
   entrada.funcionamiento();
 }
-
+///////////////////////////////
 
 
 //CONFIGURACIONES EEPROM
 void configPorDefecto(){
   int pin = 1234;
-  boolean sensorHabitacion = true;
-  boolean sensorCocina = true;
-  boolean sensorEntrada = true;
-  boolean alarmaSilenciosa = false;
+  bool sensorHabitacion = true;
+  bool sensorCocina = true;
+  bool sensorEntrada = true;
+  bool alarmaSilenciosa = false;
   
   EEPROM.put(0,pin); //guardo PIN de Activacion/Desactivacion
   EEPROM.put(2,sensorHabitacion);
@@ -289,7 +344,7 @@ void lecturaCompletaEEPROM(){
   Serial.println();
 }
 
-boolean lecturaEEPROM(int index){
+bool lecturaEEPROM(int index){
   int lectura;
   lectura = EEPROM.get(index, lectura);
   return lectura;
@@ -305,4 +360,11 @@ void pinCorrecto(int pin){
     else{
   Serial.println("Pin incorrecto");
     }
+}
+
+//METODOS DE DISPLAY
+void bienvenida(){
+	lcd.setCursor(0, 0); //columna y fila
+    lcd.print("Bienvenido!");
+  	delay(1000);
 }
