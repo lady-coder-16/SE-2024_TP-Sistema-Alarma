@@ -220,10 +220,10 @@ void setup()
   lcd.clear();
   
   bienvenida();
+  menuPrincipal();
   
   if(EEPROM.get(0, lectura)==0){
     configPorDefecto();
-    
   }
   
   //lecturaCompletaEEPROM();
@@ -234,9 +234,35 @@ void setup()
 ///////////////////////////////
 void loop()
 {  
+  char key = keypad.getKey();
+  
+  if(key != NO_KEY) { // Si se ha presionado una tecla
+    
+    static byte filaActual = 0; // Variable para rastrear la fila actual del LCD
+    static byte columnaActual = 0; // Variable para rastrear la columna actual del LCD
+    
+    // Escribir la tecla en el LCD
+   // lcd.setCursor(columnaActual, filaActual);
+    Serial.println(key);
+    
+    switch (key){
+      case '1':
+      	Serial.println("Iras a configuraciones");
+      	break;
+      case '2':
+      	Serial.println("Iras a Alarma");
+    	break;
+      case '3':
+      	Serial.println("Iras a Eventos");
+    	break;
+      default:
+      	mensajeTeclaIncorrecta();
+	}
+  }
+  
   //--------------------------------------------
   
-  char key = keypad.getKey(); // Leer la tecla presionada
+  /*char key = keypad.getKey(); // Leer la tecla presionada
   
   if(key != NO_KEY) { // Si se ha presionado una tecla
     static byte filaActual = 0; // Variable para rastrear la fila actual del LCD
@@ -259,7 +285,7 @@ void loop()
         columnaActual = 0; // Volver a la columna 0
       }
     }
-  }
+  }*/
   
   //---------------------------------------------
   
@@ -367,4 +393,32 @@ void bienvenida(){
 	lcd.setCursor(0, 0); //columna y fila
     lcd.print("Bienvenido!");
   	delay(1000);
+}
+
+void menuPrincipal(){
+  	lcd.clear();
+	lcd.setCursor(0, 0); //columna y fila
+    lcd.print("-Menu-");
+  	lcd.setCursor(0, 1); //columna y fila
+    lcd.print("1)Config");
+  	lcd.setCursor(8, 0); //columna y fila
+    lcd.print("2)Alarma");
+  	lcd.setCursor(8, 1); //columna y fila
+    lcd.print("3)Evento");
+  	delay(1000);
+}
+
+void mensajeTeclaIncorrecta(){
+  	lcd.clear();
+	lcd.setCursor(0, 0); //columna y fila
+    lcd.print("Por favor selec-");
+  	lcd.setCursor(0, 1); //columna y fila
+    lcd.print("cione una de las");
+  	delay(500);
+  	lcd.clear();
+  	lcd.setCursor(0, 0); //columna y fila
+    lcd.print("opciones dispo-");
+  	lcd.setCursor(0, 1); //columna y fila
+    lcd.print("nibles");
+  	delay(500);
 }
